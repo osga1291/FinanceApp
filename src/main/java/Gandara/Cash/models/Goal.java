@@ -1,16 +1,24 @@
 package Gandara.Cash.models;
 import javax.persistence.*;
+import java.text.DateFormat;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.Date;
+import java.util.Locale;
+
 @Entity
 @Table( name = "goal")
 public class Goal {
+
     @Id
     @GeneratedValue(strategy = GenerationType.AUTO)
     private Long id;
+
     public String type;
     private double amount;
-    private Date deadline;
+    private String deadline;
     private double amount_left;
+    private boolean completed;
 
     @ManyToOne()
     @JoinColumn(name = "userId")
@@ -19,19 +27,30 @@ public class Goal {
 
     }
 
-    public Goal(Long id, String type, double amount, Date deadline) {
+    public Goal(Long id, String type, double amount, String deadline) {
+
         this.id = id;
         this.type = type;
         this.amount = amount;
-        this.deadline = deadline;
         this.amount_left = amount;
+        this.completed = false;
+        this.deadline = deadline;
+
+    }
+
+    public boolean isCompleted() {
+        return completed;
+    }
+
+    public void setCompleted(boolean completed) {
+        this.completed = completed;
     }
 
     public void setAmount(double amount) {
         this.amount = amount;
     }
 
-    public void setDeadline(Date deadline) {
+    public void setDeadline(String deadline) {
         this.deadline = deadline;
     }
 
@@ -63,7 +82,7 @@ public class Goal {
         return amount;
     }
 
-    public Date getDeadline() {
+    public String getDeadline() {
         return deadline;
     }
 

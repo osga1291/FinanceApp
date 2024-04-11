@@ -1,88 +1,88 @@
 package Gandara.Cash.models;
 
-import org.hibernate.annotations.OnDelete;
-import org.hibernate.annotations.OnDeleteAction;
-
+import java.time.LocalDate;
 import javax.persistence.*;
+import java.text.DateFormat;
 import java.text.ParseException;
 import java.text.SimpleDateFormat;
+import java.time.LocalDateTime;
+import java.time.format.DateTimeFormatter;
 import java.util.Date;
+import java.util.HashMap;
+import java.util.Locale;
+import java.util.Optional;
 
 @Entity
-@Table(name = "bill")
-public class Bill {
-    @Id
-    @GeneratedValue(strategy = GenerationType.AUTO)
-    private Long id;
+@Table(name = "Bills")
 
-    @ManyToOne
-    @JoinColumn(name = "userId")
-    private User user;
+public class Bill extends Transaction {
 
-    private double amount;
-    private Date due_date;
-    private String type;
-    private String merchant;
+    private String occurrence;
+    private String dueDate;
+
+    
 
     public Bill(){
 
     }
 
-    public Bill(Long id, double amount, String due_date, String type, String merchant) {
-        try{
-            this.due_date = new SimpleDateFormat("yyyy-MM-dd").parse(due_date);
-        }catch (ParseException e){
-            this.due_date = null; }
-
-        this.id = id;
-        this.amount = amount;
-        this.type = type;
-        this.merchant = merchant;
+    public Bill(String id, User user,  double amount, String date, String due_date, String category, String merchant, String occurrence) {
+        super(id,user,amount,date,category,merchant);
+        this.occurrence = occurrence;
+        this.type = "Bill";
+        this.dueDate = due_date;
+        //this.setNextDueDate();
     }
 
-    public Long getId() {
-        return id;
+    public void setDueDate(String date){
+
+        this.dueDate = date;
     }
 
 
-    public void setAmount(double amount) {
-        this.amount = amount;
+    public String getDueDate(){
+
+
+        return this.dueDate;
     }
 
-    public void setDue_date(Date due_date) {
-        this.due_date = due_date;
+
+    public void setNextDueDate(){
+
+        LocalDate myDate = this.dateFormat(dueDate);
+
+        if (occurrence.equals("monthly")) {
+                myDate = myDate.plusMonths(1);
+
+        }
+        else if( occurrence.equals("yearly")){
+                myDate = myDate.plusYears(1);}
+        else{
+                myDate = myDate.plusWeeks(2);
+        }
+        dueDate = this.dateToString(myDate);
     }
 
-    public void setType(String type) {
-        this.type = type;
+
+
+
+    public void setOccurrence(String occurrence) {
+
+        this.occurrence = occurrence;
     }
 
-    public void setMerchant(String merchant) {
-        this.merchant = merchant;
+    public String getOccurrence() {
+
+        return occurrence;
     }
 
-    public void setUser(User user){
-        this.user = user;
-    }
+    public String getCurrentDate() {
 
-    public User getUser() {
-        return user;
-    }
+        DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+        LocalDateTime now = LocalDateTime.now();
+        return dtf.format(now) + " 00:00:00";
+        //return now.toString();
 
-    public String getMerchant() {
-        return merchant;
-    }
 
-    public double getAmount() {
-        return amount;
     }
-
-    public Date getDue_date() {
-        return due_date;
-    }
-
-    public String getType() {
-        return type;
-    }
-
 }

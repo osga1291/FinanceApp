@@ -3,56 +3,100 @@ package Gandara.Cash.api;
 
 import Gandara.Cash.Dao.ResourceNotFoundException;
 import Gandara.Cash.Dao.UserDao;
+import Gandara.Cash.Security.MyUserDetails;
+import Gandara.Cash.models.Transaction;
 import Gandara.Cash.models.User;
 
+import Gandara.Cash.service.IUserService;
+
+import Gandara.Cash.service.TransactionService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
-@RestController
+
+@Controller
 @RequestMapping("/api")
+
+@CrossOrigin(origins = "*")
 public class UserController {
     @Autowired
     UserDao UserData;
+    @Autowired
+    IUserService userService;
 
-    @GetMapping("/users")
-    public List<User> findUsers(){
-        return UserData.findAll();
-    }
-    @PostMapping("/users")
-    public void addUser(@RequestBody User user){
-        UserData.save(user);
-    }
-    @GetMapping("/users/{id}")
-    public ResponseEntity<User> getUserById(
-            @PathVariable(value ="id") Long userId) throws ResourceNotFoundException {
-        User user = UserData.findById(userId)
-                .orElseThrow(() -> new ResourceNotFoundException("User not found"));
-        return ResponseEntity.ok().body(user);
-    }
-    @PutMapping("/users/{id}")
-    public User updateUser(
-            @PathVariable(value = "id") Long userId,
-            @RequestBody User userDetails) throws ResourceNotFoundException{
-        return UserData.findById(userId).map(user -> {
-            user.setName(userDetails.getName());
-            return UserData.save(user);
+    @Autowired
+    TransactionService transService;
+
+
+    @GetMapping("/me/dashboard")
+    public String getCurrentUser(Model model) throws ResourceNotFoundException {
+        List<Object> list = new ArrayList<Object>();
+
+        return UserData.findById(userService.currentUser()).map(user -> {
+            list.add(user.getName());
+            list.add(user.getNet_worth());
+            list.add(user.getCashFlow());
+            list.add(user.getCCPower());
+            list.add(user.getInvest());
+            List<Transaction> spent = new ArrayList<>();
+
+            spent = transService.showMyMonth(user.getId());
+
+
+
+            System.out.println(spent);
+
+            model.addAttribute("user",list);
+            model.addAttribute("spentData", spent);
+
+            return "dashboard";
+
         })
-                .orElseThrow(()-> new ResourceNotFoundException("User not found"));
+                .orElseThrow(()->new ResourceNotFoundException("User not found."));
+
     }
-    @DeleteMapping("users/{id}")
-    public ResponseEntity<?> deleteUser(
-            @PathVariable(value = "id") Long userId) throws ResourceNotFoundException{
-            return UserData.findById(userId).map( user ->{
-                UserData.delete(user);
-                return ResponseEntity.ok().build();
-            })
-                .orElseThrow(()-> new ResourceNotFoundException("User not found."));
+
+
+
+
+    @GetMapping ("/add_me")
+    public String addUserForm(Model model){
+        User newUser = new User();
+        model.addAttribute("user",newUser);
+
+        return "new_user";
+
+
+        }
+
+    @PostMapping ("/add_me")
+    public String submitUserForm(@ModelAttribute("user") User user){
+
+        userService.addUser(user);
+        return "sign-in";
+
+
     }
+
+
+    @PutMapping("/me/")
+    public User updateUser(@RequestBody User userDetails) throws ResourceNotFoundException{
+        return userService.updateUser(userService.currentUser(), userDetails);
+    }
+
+    @DeleteMapping("/me/")
+    public ResponseEntity<?> deleteUser() throws ResourceNotFoundException{
+            return userService.deleteUser(userService.currentUser());
+    }
+
+    @PutMapping("/me/addMoney")
+    public User addCash(@RequestParam("money") double money) throws ResourceNotFoundException {
+        return userService.addCash(userService.currentUser(), money); }
 
 
 

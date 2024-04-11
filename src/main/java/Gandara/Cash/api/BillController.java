@@ -5,60 +5,88 @@ import Gandara.Cash.Dao.BillDao;
 import Gandara.Cash.Dao.ResourceNotFoundException;
 import Gandara.Cash.Dao.UserDao;
 import Gandara.Cash.models.Bill;
+import Gandara.Cash.Dao.transactionDao;
+import Gandara.Cash.models.Transaction;
 import Gandara.Cash.models.User;
+import Gandara.Cash.service.BillService;
+import Gandara.Cash.service.IBillService;
+import Gandara.Cash.service.IUserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
+import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.ModelAndView;
 
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
-@RestController
+@Controller
 @RequestMapping("/api")
 public class BillController {
-    @Autowired
-    UserDao userData;
-    @Autowired
-    BillDao billData;
 
-    @GetMapping("/bills")
+
+   @Autowired
+   BillDao billData;
+   @Autowired
+   BillService billService;
+   @Autowired
+   IUserService userService;
+
+
+   @GetMapping("/bills")
     public List<Bill> findBills(){
         return billData.findAll();
 
     }
-    @PostMapping("/users/{userId}/bills")
-    public Bill addBills(@PathVariable(value = "userId") Long userId, @RequestBody Bill bill) throws ResourceNotFoundException {
-        return userData.findById(userId).map(user -> {
-            bill.setUser(user);
-            return billData.save(bill);
-        }).orElseThrow(() -> new ResourceNotFoundException("user not found"));
+
+    @GetMapping("/me/add/bills")
+    public String showBillForm(Model model){
+       Bill newBill = new Bill();
+       List<String> options = new ArrayList<>(Arrays.asList("monthly","yearly","biweekly"));
+       model.addAttribute("bill", newBill);
+       model.addAttribute("options",options);
+
+       return "bill_form";
+
     }
 
-        @GetMapping("/users/{userId}/bills")
-    public List<Bill> getBillsByUser(@PathVariable(value = "userId") Long userId){
-        return billData.findByUserId(userId);
+
+    @PostMapping("/me/add/bills")
+    public String submitBillForm(@ModelAttribute("bill") Bill bill, Model model) throws ResourceNotFoundException {
+
+       billService.addBill(userService.currentUser(), bill);
+       List<Bill> bills = billData.findByUserId(userService.currentUser());
+       model.addAttribute("bills", bills);
+       return "bill";
+   }
+
+    @GetMapping("/me/bills")
+    public String getBillsByUser(Model model) throws ResourceNotFoundException{
+       List<Bill> bills = billData.findByUserId(userService.currentUser());
+       model.addAttribute("bills",bills);
+
+
+
+        return "bill";
+
      }
-    @PutMapping("/users/{id}/bills/{bill_id}")
-    public Bill updateBill(
-            @PathVariable(value = "id") Long userId,
-            @PathVariable(value = "bill_id") Long billId,
+
+
+    @PutMapping("/me/bills/{bill_id}")
+    public Bill updateBill(@PathVariable(value = "bill_id") Long billId,
             @RequestBody Bill billDetails) throws ResourceNotFoundException {
-        return billData.findByIdAndUserId(billId, userId).map(bill -> {
-            bill.setAmount(billDetails.getAmount());
-            bill.setDue_date(billDetails.getDue_date());
-            bill.setMerchant(billDetails.getMerchant());
-            return billData.save(bill);
-        })
-                .orElseThrow(()-> new ResourceNotFoundException("Bill not found"));
+        return billService.updateBill(userService.currentUser(), billId, billDetails);
     }
-    @DeleteMapping("users/{id}/bills/{bills_id}")
-    public ResponseEntity<?> deleteBill(@PathVariable(value = "id") Long userId,
-                           @PathVariable(value = "bill_id") Long billId)
+
+
+    @DeleteMapping("/me/bills/{bills_id}")
+    public ResponseEntity<?> deleteBill(@PathVariable(value = "bill_id") Long billId)
             throws ResourceNotFoundException{
-        return billData.findByIdAndUserId(billId,userId).map( bill ->{
-                billData.delete(bill);
-                return ResponseEntity.ok().build();
-        }).orElseThrow(()-> new ResourceNotFoundException("Cannot find bill."));
+        return billService.deleteBill(userService.currentUser(), billId);
     }
+
 
 
     }
